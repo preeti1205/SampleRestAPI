@@ -122,7 +122,13 @@ def requires_auth(f):
 @app.route('/secrets')       # curl -v -u "admin:secret" http://127.0.0.1:5000/secrets        
 @requires_auth
 def api_whisper():
+	app.logger.error('NÖ!')
 	return "SHHH, this is top secret stuff\n"
+
+#Some logging - not tested
+file_handler = logging.FileHandler('app.log')
+app.logger.addHandler(file_handler)
+app.logger.setLevel(logging.INFO)
     
 if __name__=='__main__':
     app.run()
