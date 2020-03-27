@@ -1,5 +1,8 @@
 from flask import Flask,url_for, json, jsonify
 from flask import request, Response
+from functools import wraps
+import logging
+
 app=Flask(__name__)
 
 @app.route('/')
@@ -90,6 +93,48 @@ def api_users(userid):
 		return jsonify({userid:users[userid]})   #will return {"1":"Preeti"}
 	else:
 		return not_found()
+
+# Authorization
+def check_auth(username, password):
+	return username == 'admin' and password == 'secret'
+
+def authenticate():            #if authentication failed, use this function to return a body
+	message = {'message' : "authenticate"}
+	resp = jsonify(message)
+
+	resp.status_code= 401 #unauthorized access
+	resp.headers['WWW-Authenticate'] = 'BasicRealm="Example"'
+
+	return resp
+
+def requires_auth(f):
+	@wraps(f)
+	def decorated(*args, **kwargs):
+		auth = request.authorization
+		if not auth:
+			return authenticate()
+		elif not check_auth(auth.username, auth.password):
+			return authenticate()
+		return f(*args, **kwargs)
+
+	return decorated
+
+@app.route('/secrets')       # curl -v -u "admin:secret" http://127.0.0.1:5000/secrets        
+@requires_auth
+def api_whisper():
+	return "SHHH, this is top secret stuff\n"
     
 if __name__=='__main__':
     app.run()
+
+##### CURL 
+
+# option	purpose
+# -X	specify HTTP request method e.g. POST
+# -H	specify request headers e.g. "Content-type: application/json"
+# -d	specify request data e.g. '{"message":"Hello Data"}'
+# --data-binary	specify binary request data e.g. @file.bin
+# -i	shows the response headers
+# -u	specify username and password e.g. "admin:secret"
+# -v	enables verbose mode which outputs info such as request and response headers and errors
+
